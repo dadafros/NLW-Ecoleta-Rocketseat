@@ -3,6 +3,7 @@ import { FiArrowLeft } from 'react-icons/fi'
 import { Link, useHistory } from 'react-router-dom'
 import { Map, TileLayer, Marker } from 'react-leaflet'
 import { LeafletMouseEvent } from 'leaflet'
+import Dropzone from '../../components/Dropzone'
 
 import './styles.css'
 import logo from '../../assets/logo.svg'
@@ -33,17 +34,18 @@ const CreatePoint = () => {
     const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0, 0])
     const [selectedItems, setSelectedItems] = useState<number[]>([])
     const [initialPosition, setInitialPosition] = useState<[number, number]>([0, 0])
+    const [selectedFile, setselectedFile] = useState<File>()
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        whatsapp:''
+        whatsapp: ''
     })
 
     const history = useHistory()
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(position => {
-            const { latitude, longitude } = position.coords 
+            const { latitude, longitude } = position.coords
 
             setInitialPosition([latitude, longitude])
         })
@@ -63,7 +65,7 @@ const CreatePoint = () => {
     }, [])
 
     useEffect(() => {
-        if(selectedUf === '0'){
+        if (selectedUf === '0') {
             return
         }
 
@@ -96,15 +98,15 @@ const CreatePoint = () => {
     }
 
     function handleSelectedItem(id: number) {
-        const alereadySelected = selectedItems.findIndex(item => item === id) 
-        
-        if (alereadySelected >= 0){
+        const alereadySelected = selectedItems.findIndex(item => item === id)
+
+        if (alereadySelected >= 0) {
             const filteredItems = selectedItems.filter(item => item !== id)
 
             setSelectedItems(filteredItems)
         }
-        else{
-            setSelectedItems([ ...selectedItems, id ])
+        else {
+            setSelectedItems([...selectedItems, id])
         }
     }
 
@@ -117,15 +119,19 @@ const CreatePoint = () => {
         const [latitude, longitude] = selectedPosition
         const items = selectedItems
 
-        const data = {
-            name,
-            email,
-            whatsapp,
-            uf,
-            city,
-            latitude,
-            longitude,
-            items
+        const data = new FormData()
+
+        data.append('name', name)
+        data.append('email', email)
+        data.append('whatsapp', whatsapp)
+        data.append('uf', uf)
+        data.append('city', city)
+        data.append('latitude', String(latitude))
+        data.append('longitude', String(longitude))
+        data.append('items', items.join(','))
+
+        if (selectedFile) {
+            data.append('image', selectedFile)
         }
 
         await api.post('points', data)
@@ -136,16 +142,18 @@ const CreatePoint = () => {
     return (
         <div id="page-create-point">
             <header>
-                <img src={logo} alt="Ecoleta"/>
+                <img src={logo} alt="Ecoleta" />
 
                 <Link to="/">
-                    <FiArrowLeft/>
+                    <FiArrowLeft />
                     Voltar para home
                 </Link>
             </header>
 
             <form onSubmit={handleSubmit}>
-                <h1>Cadastro do <br/> ponto de coleta</h1>
+                <h1>Cadastro do <br /> ponto de coleta</h1>
+
+                <Dropzone onFileUploaded={setselectedFile} />
 
                 <fieldset>
                     <legend>
@@ -154,7 +162,7 @@ const CreatePoint = () => {
 
                     <div className="field">
                         <label htmlFor="name">Nome da entidade</label>
-                        <input 
+                        <input
                             type="text"
                             name="name"
                             id="name"
@@ -165,7 +173,7 @@ const CreatePoint = () => {
                     <div className="field-group">
                         <div className="field">
                             <label htmlFor="email">E-mail</label>
-                            <input 
+                            <input
                                 type="email"
                                 name="email"
                                 id="email"
@@ -175,7 +183,7 @@ const CreatePoint = () => {
 
                         <div className="field">
                             <label htmlFor="whatsapp">Whatsapp</label>
-                            <input 
+                            <input
                                 type="text"
                                 name="whatsapp"
                                 id="whatsapp"
@@ -196,7 +204,7 @@ const CreatePoint = () => {
                             attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-                        <Marker position={selectedPosition}/>
+                        <Marker position={selectedPosition} />
                     </Map>
 
                     <div className="field-group">
@@ -230,7 +238,7 @@ const CreatePoint = () => {
                     <ul className="items-grid">
                         {items.map(item => (
                             <li key={item.id} onClick={() => handleSelectedItem(item.id)} className={selectedItems.includes(item.id) ? 'selected' : ''}>
-                                <img src={item.image_url} alt={item.title}/>
+                                <img src={item.image_url} alt={item.title} />
                                 <span>{item.title}</span>
                             </li>
                         ))}
