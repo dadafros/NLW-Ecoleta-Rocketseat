@@ -1,17 +1,64 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect} from 'react'
 import { ImageBackground, View, Image, StyleSheet, Text, TextInput, KeyboardAvoidingView, Platform } from 'react-native'
 import { RectButton } from 'react-native-gesture-handler'
 import { Feather as Icon } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
+import axios from 'axios'
+import RNPickerSelect from 'react-native-picker-select';
 
 const Home = () => {
-  const [uf, setUf] = useState('')
-  const [city, setCity] = useState('')
+  const [ufs, setUfs] = useState<Item[]>([])
+  const [cities, setCities] = useState<Item[]>([])
+  const [selectedUf, setselectedUf] = useState('0')
+  const [selectedCity, setselectedCity] = useState('0')
+
+  interface IBGEUFResponse {
+    sigla: string
+  }
+
+  interface IBGECityResponse {
+    nome: string
+  }
+
+  interface Item {
+    label: string,
+    value: string
+  }
+
+  useEffect(() => {
+    axios.get<IBGEUFResponse[]>('https://servicodados.ibge.gov.br/api/v1/localidades/estados').then(response => {
+        const ufInitials = response.data.map(uf => uf.sigla)
+        let list : Item[] = []
+        ufInitials.map(uf => list.push({label: uf, value: uf}))
+        setUfs(list)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (selectedUf === '0') {
+        return
+    }
+
+    axios.get<IBGECityResponse[]>(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${selectedUf}/municipios`).then(response => {
+        const cityNames = response.data.map(city => city.nome)
+        let list : Item[] = [] 
+        cityNames.map(city => list.push({label: city, value: city}))
+        setCities(list)
+    })
+  }, [selectedUf])
 
   const navigation = useNavigation()
 
   function handleNavigateToPoints() {
-    navigation.navigate('Points', {uf, city})
+    navigation.navigate('Points', {uf: selectedUf, city: selectedCity})
+  }
+
+  function handleSelectUf(item: string) {
+    setselectedUf(item)
+  }
+
+  function handleSelectCity(item: string) {
+    setselectedCity(item)
   }
 
   return (
@@ -26,8 +73,8 @@ const Home = () => {
         </View>
 
         <View style={styles.footer}>
-          <TextInput style={styles.input} placeholder="Digite a UF" value={uf} onChangeText={setUf} maxLength={2} autoCapitalize="characters" autoCorrect={false}/>
-          <TextInput style={styles.input} placeholder="Digite a cidade" value={city} onChangeText={setCity} autoCorrect={false}/>
+          <RNPickerSelect placeholder={{ label: 'Selecione seu estado', value: '0' }} value={selectedUf} onValueChange={(itemValue) => handleSelectUf(itemValue)} items={ufs}/>
+          <RNPickerSelect placeholder={{ label: 'Selecione sua cidade', value: '0' }} value={selectedCity} onValueChange={(itemValue) => handleSelectCity(itemValue)} items={cities}/>
 
           <RectButton style={styles.button} onPress={handleNavigateToPoints}>
             <View style={styles.buttonIcon}>
